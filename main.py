@@ -1,29 +1,23 @@
 import os
 from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from openai import OpenAI
 
-# ===== ENV VARIABLES =====
+# ===== VARIABLES =====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# ===== OPENAI CLIENT =====
+# ===== OPENAI =====
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 SYSTEM_PROMPT = (
-    "You are a friendly, helpful Telegram assistant. "
-    "Answer naturally like a human. Keep replies concise."
+    "You are a friendly, human-like Telegram assistant. "
+    "Reply naturally and helpfully. Keep answers concise."
 )
 
-# ===== HANDLERS =====
+# ===== COMMANDS =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("אני אונליין 🤍 כתבי לי מה שתרצי.")
+    await update.message.reply_text("אני אונליין 🤍 כתבי לי מה שבא לך.")
 
 async def smart_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
@@ -31,7 +25,7 @@ async def smart_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if not OPENAI_API_KEY:
-        await update.message.reply_text("שגיאה: חסר OPENAI_API_KEY")
+        await update.message.reply_text("שגיאה: אין מפתח OPENAI_API_KEY")
         return
 
     try:
@@ -50,19 +44,16 @@ async def smart_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(answer[:3500])
 
     except Exception as e:
-        # עכשיו נראה את השגיאה האמיתית
         await update.message.reply_text(f"שגיאה: {e}")
 
 # ===== MAIN =====
 def main():
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is not set. Add it in Railway Variables.")
+        raise RuntimeError("BOT_TOKEN is missing")
 
     app = Application.builder().token(BOT_TOKEN).build()
-
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, smart_reply))
-
     app.run_polling()
 
 if __name__ == "__main__":
