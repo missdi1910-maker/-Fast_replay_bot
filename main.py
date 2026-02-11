@@ -1,11 +1,19 @@
 import os
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 from openai import OpenAI
 
-TOKEN = os.getenv("BOT_TOKEN")
+# ===== ENV VARIABLES =====
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# ===== OPENAI CLIENT =====
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 SYSTEM_PROMPT = (
@@ -13,11 +21,12 @@ SYSTEM_PROMPT = (
     "Answer naturally like a human. Keep replies concise."
 )
 
+# ===== HANDLERS =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("אני אונליין 🤍 כתבי לי מה שתרצי.")
 
 async def smart_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (update.message.text or "").strip()
+    text = update.message.text
     if not text:
         return
 
@@ -26,27 +35,34 @@ async def smart_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        resp = client.responses.create(
-            model="gpt-5",
+        response = client.responses.create(
+            model="gpt-5-mini",
             input=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": text},
             ],
         )
-        answer = (resp.output_text or "").strip()
+
+        answer = response.output_text
         if not answer:
             answer = "…"
-        await update.message.reply_text(answer[:3500])
-    except Exception as e:
-        await update.message.reply_text("משהו השתבש, נסי שוב.")
 
+        await update.message.reply_text(answer[:3500])
+
+    except Exception as e:
+        # עכשיו נראה את השגיאה האמיתית
+        await update.message.reply_text(f"שגיאה: {e}")
+
+# ===== MAIN =====
 def main():
-    if not TOKEN:
+    if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN is not set. Add it in Railway Variables.")
 
-    app = Application.builder().token(TOKEN).build()
+    app = Application.builder().token(BOT_TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, smart_reply))
+
     app.run_polling()
 
 if __name__ == "__main__":
